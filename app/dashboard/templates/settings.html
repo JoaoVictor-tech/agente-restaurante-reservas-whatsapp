@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Configurações - Painel Bistrô Aurora{% endblock %}
+{% block content %}
+<h1>Configurações do agente</h1>
+
+<form method="post" action="/dashboard/settings">
+
+  <div class="card">
+    <h3>Provedor e modelo de LLM</h3>
+    <div class="field">
+      <label for="model_choice">Modelo ativo (usado em todas as conversas a partir de agora)</label>
+      <select id="model_choice" name="model_choice">
+        {% for provider, models in model_catalog.items() %}
+        <optgroup label="{{ provider_labels.get(provider, provider) }}">
+          {% for model_id, info in models.items() %}
+          <option value="{{ provider }}::{{ model_id }}" {% if active_choice == provider ~ '::' ~ model_id %}selected{% endif %}>
+            {{ info.label }} ({{ model_id }})
+          </option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+      <div class="hint">A troca vale a partir da próxima mensagem recebida - não precisa reiniciar nada.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Modelo de voz (respostas em áudio)</h3>
+    <div class="field">
+      <label for="tts_model">Modelo ativo na ElevenLabs</label>
+      <select id="tts_model" name="tts_model">
+        {% for model_id, info in tts_model_catalog.items() %}
+        <option value="{{ model_id }}" {% if active_tts_model == model_id %}selected{% endif %}>
+          {{ info.label }} ({{ model_id }}) - US$ {{ "%.2f"|format(info.usd_per_1000_chars) }}/1000 caracteres
+        </option>
+        {% endfor %}
+      </select>
+      <div class="hint">A troca vale a partir da próxima resposta em áudio - o custo estimado por modelo é o mesmo usado na tela de Custos.</div>
+    </div>
+    <div class="field">
+      <label style="font-weight: normal;">
+        <input type="checkbox" name="audio_replies_enabled" value="1" style="width: auto;" {% if audio_replies_enabled %}checked{% endif %} />
+        Responder em áudio quando o cliente enviar áudio
+      </label>
+      <div class="hint">
+        Desmarcando, o agente sempre responde em texto, mesmo quando o cliente mandar áudio.
+        O entendimento do áudio recebido (transcrição) continua funcionando normalmente - isso só afeta a resposta.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Chaves de API por provedor</h3>
+    <p class="hint">Deixe em branco para manter a chave já salva. As chaves ficam criptografadas no banco, nunca em texto puro.</p>
+
+    {% for provider in providers %}
+    <div class="key-row">
+      <label style="min-width: 140px; margin-bottom: 0;">{{ provider_labels.get(provider, provider) }}</label>
+      <input type="password" name="{{ provider }}_key" placeholder="{{ 'já configurada - deixe em branco para manter' if key_status.get(provider) else 'nenhuma chave configurada' }}" autocomplete="off" />
+      {% if key_status.get(provider) %}
+        <span class="key-status-ok">✓ configurada</span>
+        <label style="font-weight: normal; font-size: 12px; white-space: nowrap;">
+          <input type="checkbox" name="clear_{{ provider }}" value="1" style="width: auto;" /> remover
+        </label>
+      {% else %}
+        <span class="key-status-missing">não configurada</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if not key_status.get('openai') %}
+    <p class="hint">Obs.: a transcrição de áudio (Whisper) usa a chave OpenAI configurada no .env do servidor,
+    independente desta aqui - esta chave OpenAI é só para quando o OpenAI for o provedor da conversa.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Prompt do sistema (persona, estilo, regras, tabela de preços)</h3>
+    <p class="hint">
+      Para editar só o cardápio/itens do dia a dia com histórico e opção de reverter (ex: cardápio
+      de feriado), use a tela <a href="/dashboard/base-conhecimento">Base de Conhecimento</a> - ela edita
+      este mesmo texto, só que com versionamento. Use este campo aqui só para mudanças estruturais de
+      persona/estilo/regras, sem histórico.
+    </p>
+    <div class="field">
+      <textarea name="system_prompt">{{ prompt_value }}</textarea>
+      <div class="hint">
+        Este texto fica em cache entre as mensagens de uma mesma conversa (quando o provedor suportar) e é
+        enviado junto com o estágio atual e os dados já coletados a cada resposta.
+        {% if using_custom_prompt %}<strong>Este é um prompt customizado</strong> - marque a caixa abaixo para voltar ao padrão.{% endif %}
+      </div>
+    </div>
+    <label style="font-weight: normal; font-size: 13px;">
+      <input type="checkbox" name="reset_prompt" value="1" style="width: auto;" /> restaurar o prompt padrão (descarta o texto acima)
+    </label>
+  </div>
+
+  <div class="save-bar">
+    <button type="submit">Salvar configurações</button>
+  </div>
+</form>
+{% endblock %}

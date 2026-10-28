@@ -1,0 +1,23 @@
+# O Dockerfile faz "COPY . ." - sem este arquivo, o .env (com as chaves reais de OpenAI,
+# ElevenLabs e Helena) fica gravado nas camadas da imagem. As variaveis chegam em runtime
+# pelo "env_file" do docker-compose.yml, entao excluir o .env aqui nao quebra nada.
+.env
+.env.*
+*.bak
+*.bak-*
+
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.deepeval/
+tests/
+requirements-dev.txt
+*.egg-info/
+
+.git/
+.gitignore
+.DS_Store
+LEIA-ME.md
